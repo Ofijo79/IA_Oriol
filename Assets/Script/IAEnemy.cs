@@ -8,7 +8,10 @@ public class IAEnemy : MonoBehaviour
     enum State
     {
         Patrolling,
-        Chasing
+        Chasing,
+        Searching,
+        Waiting,
+        Attacking
     }
 
     State currentState;
@@ -23,6 +26,14 @@ public class IAEnemy : MonoBehaviour
 
     [SerializeField] float visionRange = 15;
     [SerializeField] float visionAngle = 90;
+
+    Vector3 lastTargetPosition;
+
+    [SerializeField]float searchTimer;
+
+    [SerializeField]float searchWaitTime = 15;
+
+    [SerializeField]float searchRadius = 30;
 
     // Start is called before the first frame update
     void Awake()
@@ -48,6 +59,18 @@ public class IAEnemy : MonoBehaviour
             case State.Chasing:
                 Chase();
             break;
+
+            case State.Searching:
+                Search();
+            break;
+            
+            case State.Waiting:
+                Waiting();
+            break;
+
+            case State.Attacking:
+                Attacking();
+            break;
         }
     }
 
@@ -70,19 +93,68 @@ public class IAEnemy : MonoBehaviour
 
         if(OnRange() == false)
         {
+            currentState = State.Searching;
+        }
+    }
+
+    void Search()
+    {
+        if(OnRange() == true)
+        {
+            searchTimer = 0;
+            currentState = State.Chasing;
+        }
+        searchTimer += Time.deltaTime;
+
+        if(searchTimer < searchWaitTime)
+        {
+            if(enemyAgent.remainingDistance < 0.5f)
+            {
+                Debug.Log("Buscando punto aleatorio");
+                Vector3 randomSearchPoint = lastTargetPosition + Random.insideUnitSphere * searchRadius;
+
+                randomSearchPoint.y = lastTargetPosition.y;
+
+                enemyAgent.destination = randomSearchPoint;
+            }
+        }
+        else
+        {
             currentState = State.Patrolling;
         }
     }
 
+    void Waiting()
+    {
+
+    }
+
+    void Attacking()
+    {
+        enemyAgent.destination = playerTransform.position;
+
+        Debug.Log("Attacking");
+    }
+
     void SetRandomPoint()
     {
-        float randomX = Random.Range(-patrolAreaSize.x / 2, patrolAreaSize.x / 2);
+        //float randomX = Random.Range(-patrolAreaSize.x / 2, patrolAreaSize.x / 2);
         
-        float randomZ = Random.Range(-patrolAreaSize.y / 2, patrolAreaSize.y / 2);
+        //float randomZ = Random.Range(-patrolAreaSize.y / 2, patrolAreaSize.y / 2);
 
-        Vector3 randomPoint = new Vector3(randomX, 0f, randomZ) + patrolAreaCenter.position;
+        Vector3 punto1 = new Vector3(30.66f, 12.61f, 3.64f);
+        Vector3 punto2 = new Vector3(30.07f, 12.61f, 8.16f);
+        Vector3 punto3 = new Vector3(35.38f, 12.61f, 3.64f);
+        enemyAgent.destination = punto1;
 
-        enemyAgent.destination = randomPoint;
+        //Vector3 randomPoint = new Vector3(randomX, 0f, 2.26f) + patrolAreaCenter.position;
+
+        if(enemyAgent.remainingDistance < 0.5f)
+        {
+            currentState = State.Waiting;
+        }
+
+    
     }
 
     bool OnRange()
@@ -100,7 +172,24 @@ public class IAEnemy : MonoBehaviour
 
         if(distanceToPlayer <= visionRange && angleToPlayer < visionAngle * 0.5f)
         {
-            return true;
+            //return true;
+
+            if(playerTransform.position == lastTargetPosition)
+            {
+                lastTargetPosition = playerTransform.position;
+                return true;
+            }
+
+            RaycastHit hit;
+            if(Physics.Raycast(transform.position, directionToPlayer, out hit, distanceToPlayer))
+            {
+                if(hit.collider.CompareTag("Player"))
+                {
+                    return true;
+                } 
+            }
+
+            return false;
         }
 
         return false;
