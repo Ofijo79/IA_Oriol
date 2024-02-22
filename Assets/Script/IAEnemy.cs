@@ -41,6 +41,8 @@ public class IAEnemy : MonoBehaviour
 
     private bool repeat = true;
 
+    [SerializeField] float attackRange = 5;
+
     // Start is called before the first frame update
     void Awake()
     {
@@ -104,6 +106,11 @@ public class IAEnemy : MonoBehaviour
         {
             currentState = State.Searching;
         }
+        
+        if(OnRangeAttack() == true)
+        {
+            currentState = State.Attacking;
+        }
     }
 
     void Search()
@@ -157,33 +164,29 @@ public class IAEnemy : MonoBehaviour
 
     bool OnRangeAttack()
     {
-        if(Vector3.Distance(transform.position, playerTransform.position) <= visionRange)
-        {
-            return true;
-        }
-
-        return false;
-
         Vector3 directionToPlayer = playerTransform.position - transform.position;
         float distanceToPlayer = directionToPlayer.magnitude;
         float angleToPlayer = Vector3.Angle(transform.forward, directionToPlayer);
 
         if(distanceToPlayer <= visionRange && angleToPlayer < visionAngle * 0.2f)
         {
-            return true;
+            //return true;
 
             if(playerTransform.position == lastTargetPosition)
             {
-                lastTargetPosition = playerTransform.position;
-                currentState = State.Attacking;
+                /*lastTargetPosition = playerTransform.position;
+                currentState = State.Attacking;*/
                 return true;
             }
 
             RaycastHit hit;
-            if(Physics.Raycast(transform.position, directionToPlayer, out hit, distanceToPlayer))
+            if(Physics.Raycast(transform.position, directionToPlayer, out hit, attackRange))
             {
+                Debug.DrawRay(transform.position, directionToPlayer * attackRange, Color.green);
+
                 if(hit.collider.CompareTag("Player"))
                 {
+                    lastTargetPosition = playerTransform.position;
                     return true;
                 } 
             }
